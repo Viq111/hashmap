@@ -81,7 +81,7 @@ func (h *Hashmap) Insert(key Key, value []byte) error {
 	index, _ := h.getFirstIndex(key)
 	index = h.getFirstFree(index)
 	sliceIndex := index * h.cellSize
-	binary.LittleEndian.PutUint64(h.data[sliceIndex:sliceIndex+keySize], uint64(key.Hash()))
+	binary.LittleEndian.PutUint64(h.data[sliceIndex:sliceIndex+keySize], uint64(key))
 	sliceIndex += keySize
 	copy(h.data[sliceIndex:sliceIndex+h.valueSize], value)
 	return nil
@@ -97,7 +97,6 @@ func (h *Hashmap) Get(dst [][]byte, key Key) [][]byte {
 		return dst[0:0] // Return empty slice, works for nil too
 	}
 
-	keyHash := key.Hash()
 	sliceSize := int64(len(h.data)) / h.cellSize
 	dstIndex := int64(0)
 	for { // While we can actually get objects, continue
@@ -105,7 +104,7 @@ func (h *Hashmap) Get(dst [][]byte, key Key) [][]byte {
 		if cellKey == 0 { // No more keys to find
 			return dst[0:dstIndex]
 		}
-		if cellKey == keyHash { // Add object
+		if Key(cellKey) == key { // Add object
 			var value []byte
 			exist := false
 			if int64(len(dst)) > dstIndex && int64(len(dst[dstIndex])) == h.valueSize {
@@ -140,11 +139,10 @@ func (h *Hashmap) Grow() {
 // where we either found the key or we found an empty space
 func (h *Hashmap) getFirstIndex(key Key) (int64, bool) {
 	sliceSize := int64(len(h.data)) / h.cellSize
-	keyHash := key.Hash()
-	index := keyHash % sliceSize
+	index := key.Hash() % sliceSize
 	for { // Iterate over the hashmap to find the first key or empty cell
 		cellKey := int64(binary.LittleEndian.Uint64(h.data[index*h.cellSize : index*h.cellSize+keySize]))
-		if cellKey == keyHash {
+		if Key(cellKey) == key {
 			return index, true
 		}
 		if cellKey == 0 {
