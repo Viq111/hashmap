@@ -46,8 +46,9 @@ func TestHashMapInt64(t *testing.T) {
 
 	// Get back 1 result
 	result = m.Get(nil, testKey1)
-	assert.Equal(1, len(result))
-	assert.Equal(testValue1, Deserialize(result[0]))
+	if assert.Equal(1, len(result)) {
+		assert.Equal(testValue1, Deserialize(result[0]))
+	}
 
 	// Get back the other results
 	result = m.Get(nil, testKey2)

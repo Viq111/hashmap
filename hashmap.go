@@ -37,6 +37,7 @@ type Hashmap struct {
 	capacity  int64 // How many values we can handle
 	length    int64 // How many values we have right now
 	valueSize int64
+	zeroArray [][]byte // Since we can't save the key 0 (used to indicate empty cell), use just array for it
 }
 
 // NewHashmap returns a hashmap that map a Key to an array of []objSample
@@ -74,6 +75,12 @@ func (h *Hashmap) Insert(key Key, value []byte) error {
 	if int64(len(value)) != h.valueSize {
 		return ErrIncorrectValueSize
 	}
+	if uint64(key) == 0 {
+		v := make([]byte, h.valueSize)
+		copy(v, value)
+		h.zeroArray = append(h.zeroArray, v)
+		return nil
+	}
 
 	if h.length == h.capacity {
 		h.Grow()
@@ -92,6 +99,24 @@ func (h *Hashmap) Insert(key Key, value []byte) error {
 // (is changed) or destroyed. If dst is provided, it will try to use that slice without
 // allocating a new one. If dst is nil or the capacity is not enough, it will create a new one
 func (h *Hashmap) Get(dst [][]byte, key Key) [][]byte {
+	if uint64(key) == 0 {
+		if cap(dst) >= len(h.zeroArray) {
+			dst = dst[0:len(h.zeroArray)]
+		} else {
+			dst = make([][]byte, len(h.zeroArray))
+		}
+		for i, src := range h.zeroArray {
+			var d []byte
+			if int64(cap(dst[i])) >= h.valueSize {
+				d = dst[i][0:h.valueSize]
+			} else {
+				d = make([]byte, h.valueSize)
+			}
+			copy(d, src)
+			dst[i] = d
+		}
+		return dst
+	}
 	index, found := h.getFirstIndex(key)
 	if !found {
 		return dst[0:0] // Return empty slice, works for nil too
