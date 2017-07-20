@@ -4,7 +4,7 @@ import "unsafe"
 
 const (
 	keySize = 8
-	MaxInt  = (^uint64(0)) >> 1
+	maxInt  = (^uint64(0)) >> 1
 )
 
 // Key denotates what is used as a key in the Hashmap
@@ -21,7 +21,7 @@ func (k Key) Hash() int64 {
 	x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9
 	x = (x ^ (x >> 27)) * 0x94d049bb133111eb
 	x = x ^ (x >> 31)
-	r := int64(x % MaxInt)
+	r := int64(x % maxInt)
 	if r == 0 { // Make sure we never use 0 key
 		r++
 	}
