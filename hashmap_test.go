@@ -1,7 +1,6 @@
 package hashmap
 
 import (
-	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,18 +9,6 @@ import (
 func TestHashMapInt64(t *testing.T) {
 	assert := assert.New(t)
 
-	// Define your value here
-	type Value int64
-	valueSize := int64(8)
-	Serialize := func(v Value) []byte {
-		data := make([]byte, 8)
-		binary.LittleEndian.PutUint64(data, uint64(v))
-		return data
-	}
-	Deserialize := func(data []byte) Value {
-		return Value(binary.LittleEndian.Uint64(data))
-	}
-
 	// Create and test a []int64 hashmap
 	m := NewHashmap(valueSize, 10) // This should grow after 8 objects
 	testEmptyKey := Key(1)
@@ -29,14 +16,14 @@ func TestHashMapInt64(t *testing.T) {
 	// Test that we can insert a single value at Key 0
 	testKey1 := Key(0)
 	testValue1 := Value(2)
-	err := m.Insert(testKey1, Serialize(testValue1))
+	err := m.Insert(testKey1, testValue1.Serialize())
 	assert.NoError(err)
 
 	// Test that we can insert more keys
 	testValues2 := []Value{1, 2, 4, 5}
 	testKey2 := Key(10)
 	for _, v := range testValues2 {
-		err = m.Insert(testKey2, Serialize(v))
+		err = m.Insert(testKey2, v.Serialize())
 		assert.NoError(err)
 	}
 
@@ -57,4 +44,34 @@ func TestHashMapInt64(t *testing.T) {
 		r := Deserialize(val)
 		assert.Equal(testValues2[i], r)
 	}
+}
+
+func TestGrow(t *testing.T) {
+	assert := assert.New(t)
+	var err error
+	m := NewHashmap(valueSize, 5) // This should grow after 5 objects
+
+	for i := 0; i < 15; i++ {
+		// Add 30 objects which should grow it twice
+		v := Value(i * 2)
+		err = m.Insert(Key(2), v.Serialize())
+		assert.NoError(err)
+		v = Value(i*2 + 1)
+		err = m.Insert(Key(0), v.Serialize())
+		assert.NoError(err)
+	}
+
+	result := m.Get(nil, 2)
+	if assert.Equal(15, len(result)) {
+		for i := 0; i > 15; i++ {
+			assert.Equal(Value(i*2), result[i])
+		}
+	}
+	result = m.Get(nil, 0)
+	if assert.Equal(15, len(result)) {
+		for i := 0; i > 15; i++ {
+			assert.Equal(Value(i*2+1), result[i])
+		}
+	}
+
 }

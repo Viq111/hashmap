@@ -46,7 +46,7 @@ type Hashmap struct {
 func NewHashmap(valueSize, capacity int64) *Hashmap {
 	cellSize := int64(keySize + valueSize)
 	// Since we will grow as soon as we reach cap, we need the slice to be cap * loadFactor
-	sliceSize := int(float64(capacity*cellSize)*loadFactor) + 1
+	sliceSize := int(float64(capacity*cellSize)/loadFactor) + 1
 	data := make([]byte, sliceSize)
 	return &Hashmap{
 		cellSize:  cellSize,
@@ -75,15 +75,16 @@ func (h *Hashmap) Insert(key Key, value []byte) error {
 	if int64(len(value)) != h.valueSize {
 		return ErrIncorrectValueSize
 	}
+
+	if h.length == h.capacity {
+		h.Grow()
+	}
 	if uint64(key) == 0 {
 		v := make([]byte, h.valueSize)
 		copy(v, value)
 		h.zeroArray = append(h.zeroArray, v)
+		h.length++
 		return nil
-	}
-
-	if h.length == h.capacity {
-		h.Grow()
 	}
 	index, _ := h.getFirstIndex(key)
 	index = h.getFirstFree(index)
@@ -91,6 +92,7 @@ func (h *Hashmap) Insert(key Key, value []byte) error {
 	binary.LittleEndian.PutUint64(h.data[sliceIndex:sliceIndex+keySize], uint64(key))
 	sliceIndex += keySize
 	copy(h.data[sliceIndex:sliceIndex+h.valueSize], value)
+	h.length++
 	return nil
 }
 
@@ -154,10 +156,15 @@ func (h *Hashmap) Get(dst [][]byte, key Key) [][]byte {
 
 // Grow just grows the hashmap once it reaches its capacity
 func (h *Hashmap) Grow() {
-	//newMap := hashmapFromType(h.valueType, h.valueSize, h.cap*growthRatio)
+	newMap := NewHashmap(h.valueSize, int64(h.Cap())*growthRatio)
 	// Copy data over
-	// ToDo
-	//h = newMap
+	it := newIterator(h)
+	var k Key
+	var v []byte
+	for it.UnsafeNext(&k, &v) {
+		newMap.Insert(k, v)
+	}
+	*h = *newMap
 }
 
 // getFirstIndex returns the first index in the array
