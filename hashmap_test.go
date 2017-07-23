@@ -75,3 +75,51 @@ func TestGrow(t *testing.T) {
 	}
 
 }
+
+func BenchmarkInsertWithoutGrowth(b *testing.B) {
+	m := NewHashmap(valueSize, int64(b.N+5))
+	for i := 0; i < b.N; i++ {
+		k := Key(i)
+		v := Value(i*2 + 1).Serialize()
+		m.Insert(k, v)
+	}
+}
+
+func BenchmarkStdInsertWithoutGrowth(b *testing.B) {
+	m := make(map[Key][]byte, b.N+5)
+	for i := 0; i < b.N; i++ {
+		k := Key(i)
+		v := Value(i*2 + 1).Serialize()
+		m[k] = v
+	}
+}
+
+func BenchmarkInsert(b *testing.B) {
+	m := NewHashmap(valueSize, 5)
+	for i := 0; i < b.N; i++ {
+		k := Key(i)
+		v := Value(i*2 + 1).Serialize()
+		m.Insert(k, v)
+	}
+}
+
+func BenchmarkStdInsert(b *testing.B) {
+	m := make(map[Key][]byte, 5)
+	for i := 0; i < b.N; i++ {
+		k := Key(i)
+		v := Value(i*2 + 1).Serialize()
+		m[k] = v
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	testKey := Key(5)
+	m := NewHashmap(valueSize, 100)
+	for i := 0; i < 10; i++ {
+		m.Insert(testKey, Value(i*2).Serialize())
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.Get(nil, testKey)
+	}
+}
